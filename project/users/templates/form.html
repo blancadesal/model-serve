@@ -35,44 +35,44 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.1/js/bootstrap.min.js"
     integrity="sha512-EKWWs1ZcA2ZY9lbLISPz8aGR2+L7JVYqBAYTq5AXgBkSjRSuQEGqWx8R1zAX16KdXPaCjOCaKE8MCpU0wcHlHA=="
     crossorigin="anonymous" referrerpolicy="no-referrer">
-    </script>
+   </script>
 
 </body>
 </html>
 
+<script
+type="text/javascript"
+src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.js">
+</script>
+
 <script>
-    function update_progress(yourForm, task_id, btnHtml) {
-      fetch(`/users/task_status/?task_id=${task_id}`, {
-        method: 'GET',
-      })
-        .then(response => response.json())
-        .then((res) => {
-          const taskStatus = res.state;
+    function update_progress(userForm, task_id, btnHtml) {
+      // use namespace
+      const socket = io('/task_status');
 
-          if (taskStatus !== 'PENDING' && taskStatus !== 'PROGRESS') {
-            const msg = yourForm.querySelector('#messages');
-            const submitBtn = yourForm.querySelector('button[type="submit"]');
+      socket.on('connect', function () {
+        socket.emit('join', {'task_id': `${task_id}`});
+      });
+      socket.on('status', function (res) {
+        const taskStatus = res.state;
 
-            if (taskStatus === 'SUCCESS') {
-              msg.innerHTML = 'job succeeded';
-            } else if (taskStatus === 'FAILURE') {
-              // display error message on the form
-              msg.innerHTML = res.error;
-            }
+        if (taskStatus !== 'PENDING' && taskStatus !== 'PROGRESS') {
+          const msg = userForm.querySelector('#messages');
+          const submitBtn = userForm.querySelector('button[type="submit"]');
 
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = btnHtml;
-          } else {
-            // the task is still running
-            setTimeout(function () {
-              update_progress(yourForm, task_id, btnHtml);
-            }, 1000);
+          if (taskStatus === 'SUCCESS') {
+            msg.innerHTML = 'job succeeded';
+          } else if (taskStatus === 'FAILURE') {
+            msg.innerHTML = res.error;
           }
-        })
-        .catch((error) => {
-          console.error('Error:', error)
+
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = btnHtml;
+          // close the websocket because we do not need it now
+          socket.close();
         }
-        );
+
+      });
     }
 
     function serialize(data) {
@@ -91,20 +91,20 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-      const yourForm = document.getElementById("your-form");
-      yourForm.addEventListener("submit", function (event) {
+      const userForm = document.getElementById("your-form");
+      userForm.addEventListener("submit", function (event) {
         event.preventDefault();
-        const submitBtn = yourForm.querySelector('button[type="submit"]');
+        const submitBtn = userForm.querySelector('button[type="submit"]');
         const btnHtml = submitBtn.innerHTML;
         const spinnerHtml = 'Processing...';
         submitBtn.disabled = true;
         submitBtn.innerHTML = spinnerHtml;
 
-        const msg = yourForm.querySelector('#messages');
+        const msg = userForm.querySelector('#messages');
         msg.innerHTML = '';
 
         // Get all field data from the form
-        let data = new FormData(yourForm);
+        let data = new FormData(userForm);
         // Convert to an object
         let formData = serialize(data);
 
@@ -120,7 +120,7 @@
           .then((res) => {
             // after we get Celery task id, we start polling
             const task_id = res.task_id;
-            update_progress(yourForm, task_id, btnHtml);
+            update_progress(userForm, task_id, btnHtml);
             console.log(res);
           })
           .catch((error) => {

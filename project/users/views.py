@@ -1,14 +1,13 @@
 import random
-import logging
+# import logging
 
 import requests
 from celery.result import AsyncResult
-from flask import Blueprint, render_template, flash, abort, request, Response, jsonify, current_app
+from flask import render_template, request, jsonify
 
 from . import users_blueprint
-from project import csrf
-from project.users.forms import YourForm
-from project.users.tasks import sample_task, task_process_notification
+from project.users.forms import UserForm
+from project.users.tasks import sample_task
 
 
 def api_call(email):
@@ -18,18 +17,6 @@ def api_call(email):
 
     # used for simulating a call to a third-party api
     requests.post('https://httpbin.org/delay/5')
-
-
-@users_blueprint.route('/form/', methods=('GET', 'POST'))
-def subscribe():
-    form = YourForm()
-    if form.validate_on_submit():
-        task = sample_task.delay(form.email.data)
-        return jsonify({
-            'task_id': task.task_id,
-        })
-    return render_template('form.html', form=form)
-
 
 @users_blueprint.route('/task_status/', methods=('GET', 'POST'))
 def task_status():
@@ -49,30 +36,13 @@ def task_status():
             }
         return jsonify(response)
 
-@users_blueprint.route('/webhook_test/', methods=('POST', ))
-@csrf.exempt
-def webhook_test():
-    if not random.choice([0, 1]):
-        # mimic an error
-        raise Exception()
-
-    # blocking process
-    requests.post('https://httpbin.org/delay/5')
-    return 'pong'
-
-@users_blueprint.route('/webhook_test2/', methods=('POST', ))
-@csrf.exempt
-def webhook_test_2():
-   task = task_process_notification.delay()
-   current_app.logger.info(task.id)
-   return 'pong'
-
-@users_blueprint.route('/form_ws/', methods=('GET', 'POST'))
+# Used to test WebSocket transport
+@users_blueprint.route('/form/', methods=('GET', 'POST'))
 def subscribe_ws():
-    form = YourForm()
+    form = UserForm()
     if form.validate_on_submit():
         task = sample_task.delay(form.email.data)
         return jsonify({
             'task_id': task.task_id,
         })
-    return render_template('form_ws.html', form=form)
+    return render_template('form.html', form=form)

@@ -3,7 +3,7 @@ Overview
 
 This is some starter code for a Flask-Celery-Redis app with WebSocket support through `eventlet`.
 It contains a few tasks that can be used to manually test out the functionality.
-Right now, Redis is used as both the message broker and the results backend, but a production app for image serving would rather use RabbitMQ as the message broker.
+Right now, Redis is used as both the message broker and the results backend, but a production app for CV model serving would rather use RabbitMQ as the message broker.
 
 
 Quick start
